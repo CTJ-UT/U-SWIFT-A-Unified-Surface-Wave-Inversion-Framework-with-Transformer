@@ -27,9 +27,7 @@ The framework operates in a powerful five-step process, which is visualized belo
 1.  **Estimate Scaling Factors**: The process begins by providing broad estimates for the half-space depth ($H_{hs}$) and S-wave velocity ($V_{S,hs}$). These can be initially constrained based on the properties of the experimental dispersion curve itself. Multiple pairs of these parameters are sampled to explore the solution space.
 
 2.  **Normalization**: For each sampled pair, depth ($\alpha_{H}$) and velocity ($\alpha_{v}$) scaling factors are calculated. These factors are used to transform the target dispersion curve ($f, V_{R}$) into a predefined Normalized Dispersion Curve Space (NDCS).
-$$
-\alpha_{H} = \frac{H_{0}}{H_{hs}}, \quad \alpha_{v} = \frac{V_{S0}}{V_{S,hs}}
-$$
+$$\alpha_{H} = \frac{H_{0}}{H_{hs}}, \quad \alpha_{v} = \frac{V_{S0}}{V_{S,hs}}$$
 $$
 f_{n} = \frac{\alpha_{v}}{\alpha_{H}}f, \quad V_{R,n} = \alpha_{v}V_{R}
 $$
