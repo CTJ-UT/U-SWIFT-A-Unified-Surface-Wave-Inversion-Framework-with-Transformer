@@ -22,7 +22,7 @@ The key innovation of this framework is the normalization of dispersion curves b
 
 The framework operates in a powerful five-step process, which is visualized below. This process decouples the inversion from the specific scale of the problem, allowing for a universally applicable model.
 
-![U-SWIFT Workflow](assets/workflow.png)
+![U-SWIFT Workflow](assets/workflow.jpg)
 
 1.  **Estimate Scaling Factors**: The process begins by providing broad estimates for the half-space depth ($H_{hs}$) and S-wave velocity ($V_{S,hs}$). These can be initially constrained based on the properties of the experimental dispersion curve itself. Multiple pairs of these parameters are sampled to explore the solution space.
 
