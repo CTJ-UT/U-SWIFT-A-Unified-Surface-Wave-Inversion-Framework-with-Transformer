@@ -27,17 +27,16 @@ The framework operates in a powerful five-step process, which is visualized belo
 1.  **Estimate Scaling Factors**: The process begins by providing broad estimates for the half-space depth ($H_{hs}$) and S-wave velocity ($V_{S,hs}$). These can be initially constrained based on the properties of the experimental dispersion curve itself. Multiple pairs of these parameters are sampled to explore the solution space.
 
 2.  **Normalization**: For each sampled pair, depth ($\alpha_{H}$) and velocity ($\alpha_{v}$) scaling factors are calculated. These factors are used to transform the target dispersion curve ($f, V_{R}$) into a predefined Normalized Dispersion Curve Space (NDCS).
+   
 $$\alpha_{H} = \frac{H_{0}}{H_{hs}}, \quad \alpha_{v} = \frac{V_{S0}}{V_{S,hs}}$$
-$$
-f_{n} = \frac{\alpha_{v}}{\alpha_{H}}f, \quad V_{R,n} = \alpha_{v}V_{R}
-$$
+
+$$f_{n} = \frac{\alpha_{v}}{\alpha_{H}}f, \quad V_{R,n} = \alpha_{v}V_{R}$$
 
 3.  **AI-Powered Prediction**: The normalized dispersion curve ($f_n, V_{R,n}$) is then processed by the pre-trained U-SWIFT model, which instantly outputs a corresponding high-resolution normalized $V_S$ profile ($z_n, V_{S,n}$).
 
 4.  **Denormalization**: The normalized profile is scaled back using the inverse of the scaling factors to yield a potential real-world inverted $V_S$ profile ($z, V_S$). This step is repeated for all sampled pairs to generate a large ensemble of potential solutions.
-$$
-z = \frac{z_{n}}{\alpha_{H}}, \quad V_{S} = \frac{V_{S,n}}{\alpha_{v}}
-$$
+
+$$z = \frac{z_{n}}{\alpha_{H}}, \quad V_{S} = \frac{V_{S,n}}{\alpha_{v}}$$
 
 5.  **Screening and Selection**: For each inverted $V_S$ profile in the ensemble, a theoretical dispersion curve is forward-calculated. The **misfit** between this theoretical curve and the original experimental curve is computed.
     * The profile with the **lowest misfit** is selected as the **best-fit model**.
