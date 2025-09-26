@@ -14,6 +14,6 @@ The key innovation of this framework is the normalization of dispersion curves b
 
 **Variable-Length Input**: The framework incorporates a Transformer-based model (PADIT) that is specifically designed to process dispersion curves of varying lengths, eliminating the need for fixed-size inputs.
 
-**Robust Uncertainty Quantification**: The framework can rapidly generate an ensemble of valid Vs profiles that fit the observed data [cite: 28][cite_start], allowing for a robust and meaningful quantification of the inversion uncertainty.
+**Robust Uncertainty Quantification**: The framework can rapidly generate an ensemble of valid Vs profiles that fit the observed data, allowing for a robust and meaningful quantification of the inversion uncertainty.
 
-**Simplified Workflow**: This approach eliminates the need for tedious manual parameterization (e.g., defining the number of layers)[cite: 738]. [cite_start]Users only need to provide a broad estimate for the half-space depth and velocity to obtain accurate results.
+**Simplified Workflow**: This approach eliminates the need for tedious manual parameterization (e.g., defining the number of layers). Users only need to provide a broad estimate for the half-space depth and velocity to obtain accurate results.
