@@ -36,6 +36,8 @@ $$f_{n} = \frac{\alpha_{v}}{\alpha_{H}}f, \quad V_{R,n} = \alpha_{v}V_{R}$$
 
 4.  **Denormalization**: The normalized profile is scaled back using the inverse of the scaling factors to yield a potential real-world inverted $V_S$ profile ($z, V_S$). This step is repeated for all sampled pairs to generate a large ensemble of potential solutions.
 
+$$z = \frac{z_{n}}{\alpha_{H}}, \quad V_{S} = \frac{V_{S,n}}{\alpha_{v}}$$
+
 5.  **Screening and Selection**: For each inverted $V_S$ profile in the ensemble, a theoretical dispersion curve is forward-calculated. The **misfit** between this theoretical curve and the original experimental curve is computed.
     * The profile with the **lowest misfit** is selected as the **best-fit model**.
     * All profiles with a misfit below a certain threshold (e.g., misfit < 1) are considered **valid models**. This collection of valid models provides a robust characterization of the solution's uncertainty.
@@ -56,10 +58,6 @@ First, get all the required files from the official release page.
 3.  Unzip the `Source code (zip)` archive.
 4.  Inside the newly unzipped directory, **create a new folder** named `models` if it does not already exist.
 5.  **Move** the `aggregation_model.pth` and `aggregation_scaler.pkl` files into the `models` folder.
-
-Your project directory should now be structured correctly:
-
-$$z = \frac{z_{n}}{\alpha_{H}}, \quad V_{S} = \frac{V_{S,n}}{\alpha_{v}}$$
 
 ### 2. Install Dependencies
 
