@@ -11,6 +11,9 @@ The key innovation of this framework is the normalization of dispersion curves b
 ## ✨ Key Features
 
 **Scale Invariance**: By leveraging the normalization of dispersion curves based on their physical scaling properties, a single pre-trained model can be applied to inversion problems at vastly different scales—from shallow near-surface (<10m) to deep crustal levels—without any retraining.
+
 **Variable-Length Input**: The framework incorporates a Transformer-based model (PADIT) that is specifically designed to process dispersion curves of varying lengths, eliminating the need for fixed-size inputs.
+
 **Robust Uncertainty Quantification**: The framework can rapidly generate an ensemble of valid Vs profiles that fit the observed data [cite: 28][cite_start], allowing for a robust and meaningful quantification of the inversion uncertainty.
+
 **Simplified Workflow**: This approach eliminates the need for tedious manual parameterization (e.g., defining the number of layers)[cite: 738]. [cite_start]Users only need to provide a broad estimate for the half-space depth and velocity to obtain accurate results.
