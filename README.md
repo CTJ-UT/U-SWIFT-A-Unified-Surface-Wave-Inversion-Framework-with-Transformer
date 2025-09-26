@@ -68,5 +68,5 @@ Please use your preferred package manager (e.g., `pip`, `conda`) to install thes
 ### 3. Run the Inversion
 
 1.  Open and run the **`main.ipynb`** notebook.
-2.  In the notebook, modify the path to point to your dispersion curve data file and set the estimation ranges for the half-space parameters (**`$H_{hs}$`** and **`$V_{S,hs}$`**).
+2.  In the notebook, modify the path to point to your dispersion curve data file and set the estimation ranges for the half-space parameters ($H_{hs}$ and $V_{S,hs}$).
 3.  Execute all cells to perform the inversion and visualize the results.
