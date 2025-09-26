@@ -290,29 +290,7 @@ def forward_parallel(vs_profiles, f_scaled, n_jobs=-1):
 
     return np.array(vrs)
 
-def find_qualified_indices_and_rank(vr, vr_err, vr_models):
-    error = np.mean(np.abs((vr_models - vr) / vr_err), axis=1)
-    qualified_indices = np.where(error < 1)[0]
-    error = error[qualified_indices]
-    sort_order = np.argsort(error)
-    qualified_indices = qualified_indices[sort_order]
-
-    return qualified_indices
-
-def find_qualified_indices_and_rank2(vr, vr_err, vr_models):
-    lower_bound = vr - vr_err
-    upper_bound = vr + vr_err
-
-    mask = (vr_models >= lower_bound) & (vr_models <= upper_bound)
-    mask_qualified = np.all(mask, axis=1)
-    qualified_vr = vr_models[mask_qualified]
-    mses = np.mean((qualified_vr - vr) ** 2, axis=1)
-    sort_order = np.argsort(mses)
-    qualified_indices = np.where(mask_qualified)[0][sort_order]
-
-    return qualified_indices
-
-def find_qualified_indices_and_rank3(vr, vr_err, vr_models, limit=1):
+def find_qualified_indices_and_rank(vr, vr_err, vr_models, limit=1):
     """
     Identify indices of model predictions that fit observed values within a specified misfit limit, and rank them by misfit.
     Parameters
