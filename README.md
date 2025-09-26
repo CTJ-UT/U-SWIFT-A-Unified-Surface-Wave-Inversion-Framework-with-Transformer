@@ -41,3 +41,32 @@ $$z = \frac{z_{n}}{\alpha_{H}}, \quad V_{S} = \frac{V_{S,n}}{\alpha_{v}}$$
 5.  **Screening and Selection**: For each inverted $V_S$ profile in the ensemble, a theoretical dispersion curve is forward-calculated. The **misfit** between this theoretical curve and the original experimental curve is computed.
     * The profile with the **lowest misfit** is selected as the **best-fit model**.
     * All profiles with a misfit below a certain threshold (e.g., misfit < 1) are considered **valid models**. This collection of valid models provides a robust characterization of the solution's uncertainty.
+
+## 🚀 Quick Start Guide
+
+Follow these steps to download the necessary files and run an inversion.
+
+### 1. Download and Prepare the Project
+
+First, get all the required files from the official release page.
+
+1.  Navigate to the project's [**Releases Page**](https://github.com/CTJ-UT/U-SWIFT-A-Unified-Surface-Wave-Inversion-Framework-with-Transformer/releases).
+2.  From the latest release (e.g., `PADIT v1.0.0`), download all **three** essential items:
+    * `Source code (zip)`
+    * `aggregation_model.pth`
+    * `aggregation_scaler.pkl`
+3.  Unzip the `Source code (zip)` archive.
+4.  Inside the newly unzipped directory, **create a new folder** named `models` if it does not already exist.
+5.  **Move** the `aggregation_model.pth` and `aggregation_scaler.pkl` files into the `models` folder.
+
+### 2. Install Dependencies
+
+Before running, please ensure all required libraries are installed in your Python environment. The necessary packages and their recommended versions are listed in the `requirements.txt` file.
+
+Please use your preferred package manager (e.g., `pip`, `conda`) to install these dependencies accordingly.
+
+### 3. Run the Inversion
+
+1.  Open and run the **`main.ipynb`** notebook.
+2.  In the notebook, modify the path to point to your dispersion curve data file and set the estimation ranges for the half-space parameters ($H_{hs}$ and $V_{S,hs}$).
+3.  Execute all cells to perform the inversion and visualize the results.
