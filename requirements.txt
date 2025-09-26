@@ -1,0 +1,13 @@
+# --- Core Machine Learning ---
+torch
+scikit-learn==1.4.2
+
+# --- Scientific Computing & Geophysics ---
+numpy
+scipy
+disba
+
+# --- Utilities & Plotting ---
+matplotlib
+tqdm
+joblib
