@@ -6,7 +6,7 @@
 
 This repository contains the official implementation of the paper: "[U-SWIFT: A Unified Surface Wave Inversion Framework with Transformer via Normalization of Dispersion Curves]".
 
-The key innovation of this framework is the normalization of dispersion curves based on their scaling properties. [cite_start]This allows a single, pre-trained model to robustly predict Vs profiles across diverse depth and velocity scales, from near-surface engineering applications to deep crustal imaging, without retraining.
+The key innovation of this framework is the normalization of dispersion curves based on their scaling properties. This allows a single, pre-trained model to robustly predict Vs profiles across diverse depth and velocity scales, from near-surface engineering applications to deep crustal imaging, without retraining.
 
 ## ✨ Key Features
 
