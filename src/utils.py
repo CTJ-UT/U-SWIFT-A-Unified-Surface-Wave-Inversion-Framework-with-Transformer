@@ -1,11 +1,11 @@
 import numpy as np
 import torch
-import pickle
 from collections import defaultdict
 from disba import PhaseDispersion
 from scipy.interpolate import interp1d
 from aggregation_model import Config, LayerNormSumAggregationModel
 from tqdm import tqdm
+import joblib
 from joblib import Parallel, delayed
 
 def scale_and_resample_dc(f, vr, vs_bounds, depth_bounds, nv = 400, nd = 400, v_scale = 'linear', d_scale = 'linear'):
@@ -124,7 +124,7 @@ def run_prediction(model_path, scaler_path, input_data):
     model_path : str
         Path to the saved model checkpoint file.
     scaler_path : str
-        Path to the saved scalers (pickle file).
+        Path to the saved scalers.
     input_data : list of np.ndarray
         List of input samples, each as a 2D numpy array of shape (sequence_length, 2),
         where columns represent frequency and velocity.
@@ -151,7 +151,7 @@ def run_prediction(model_path, scaler_path, input_data):
 
     print("Loading scalers...")
     with open(scaler_path, 'rb') as f:
-        scalers = pickle.load(f)
+        scalers = joblib.load(f)
     freq_scaler = scalers['freq_scaler']
     vel_scaler = scalers['vel_scaler']
 
