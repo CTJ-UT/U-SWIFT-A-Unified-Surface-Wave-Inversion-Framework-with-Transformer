@@ -1,6 +1,6 @@
 # --- Core Machine Learning ---
 torch
-scikit-learn==1.4.2
+scikit-learn
 
 # --- Scientific Computing & Geophysics ---
 numpy
