@@ -2,7 +2,7 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-**U-SWIFT is a unified deep learning framework for inverting surface wave dispersion curves to obtain shear wave velocity (Vs) profiles.**
+**U-SWIFT is a unified deep learning framework for inverting fundamental-mode Rayleigh-wave dispersion curves to obtain shear wave velocity (Vs) profiles.**
 
 This repository contains the official implementation of the paper: "[U-SWIFT: A Unified Surface Wave Inversion Framework with Transformer via Normalization of Dispersion Curves]".
 
