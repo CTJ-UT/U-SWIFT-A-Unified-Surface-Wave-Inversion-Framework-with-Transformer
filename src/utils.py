@@ -2,11 +2,12 @@ import numpy as np
 import torch
 from collections import defaultdict
 from disba import PhaseDispersion
-from scipy.interpolate import interp1d
 from aggregation_model import Config, LayerNormSumAggregationModel
 from tqdm import tqdm
-import joblib
 from joblib import Parallel, delayed
+
+FREQ_LOG_MIN = -2.3
+FREQ_LOG_MAX = 2.0
 
 def scale_and_resample_dc(f, vr, vs_bounds, depth_bounds, nv = 400, nd = 400, v_scale = 'linear', d_scale = 'linear'):
     """
@@ -35,17 +36,17 @@ def scale_and_resample_dc(f, vr, vs_bounds, depth_bounds, nv = 400, nd = 400, v_
         Scaling type for depth axis (default is 'linear').
     Returns
     -------
-    depth_scalers : ndarray
-        1D array of depth scaling factors for the selected (valid) grid points.
-    vs_scalers : ndarray
-        1D array of velocity scaling factors for the selected (valid) grid points.
+    depth : ndarray
+        1D array of depth for the selected (valid) grid points.
+    vs_hs : ndarray
+        1D array of velocity for the selected (valid) grid points.
     f_vr_resampled : list of ndarray
         List where each element is a 2D array of shape (N, 2), containing resampled
         frequency and velocity pairs for each valid grid point.
     Notes
     -----
     - The function filters out grid points where the scaled frequency range does not
-      overlap with the target frequency range [10^-1.3, 10^3] Hz.
+      overlap with the target frequency range [10^-2.3, 10^2] Hz.
     - Interpolation is performed in log-frequency space.
     - Output `f_vr_resampled` contains only valid (non-NaN) frequency-velocity pairs
       for each grid point.
@@ -55,76 +56,88 @@ def scale_and_resample_dc(f, vr, vs_bounds, depth_bounds, nv = 400, nd = 400, v_
         vs_hs = np.linspace(vs_bounds[0], vs_bounds[1], nv)
     elif v_scale == 'log':
         vs_hs = np.logspace(np.log10(vs_bounds[0]), np.log10(vs_bounds[1]), nv)
+    else:
+        raise ValueError("v_scale must be 'linear' or 'log'")
+    
     if d_scale == 'linear':
         depths = np.linspace(depth_bounds[0], depth_bounds[1], nd)
     elif d_scale == 'log':
         depths = np.logspace(np.log10(depth_bounds[0]), np.log10(depth_bounds[1]), nd)
+    else:
+        raise ValueError("d_scale must be 'linear' or 'log'")
 
-    depth_scalers = np.tile(100 / depths, len(vs_hs))
-    vs_scalers = np.repeat(1000 / vs_hs, len(depths))
-    f_scaled = vs_scalers.reshape(-1, 1) /depth_scalers.reshape(-1, 1) * f.reshape(1, -1)
+    f = np.asarray(f).ravel()  
+    vr = np.asarray(vr).ravel()    
+    depth = np.tile(depths, len(vs_hs))
+    vs_hs = np.repeat(vs_hs, len(depths))
 
-    row_indices = np.where((np.max(f_scaled, axis=1) >= 10**-1.3) & (np.min(f_scaled, axis=1) <= 10**3))[0]
-    depth_scalers = depth_scalers[row_indices]
-    vs_scalers = vs_scalers[row_indices]
+    scale = depth / vs_hs 
+    f_lo, f_hi = f.min(), f.max()           
+    keep = np.where((scale * f_hi >= 10**-2.3) & (scale * f_lo <= 10**2))[0]
+    depth, vs_hs = depth[keep], vs_hs[keep]
+    scale = depth / vs_hs
 
-    f_all = np.logspace(-1.3, 3, 256)
-    f_reverse_scaled = f_all.reshape(1, -1) * depth_scalers.reshape(-1, 1) / vs_scalers.reshape(-1, 1)
-    interpolator = interp1d(np.log(f), vr, bounds_error = False, fill_value = np.nan)
-    vr_reverse_scaled = interpolator(np.log(f_reverse_scaled))
-    vr_resampled = vr_reverse_scaled * vs_scalers.reshape(-1, 1)
+    f_all = np.logspace(-2.3, 2, 256)
+    log_f_all = np.log(f_all)
+    log_scale = np.log(scale)
+    log_f_reverse_scaled = log_f_all[None, :] - log_scale[:, None]
+    vr_reverse_scaled = np.interp(
+        log_f_reverse_scaled.ravel(),
+        np.log(f),
+        vr,
+        left=np.nan,
+        right=np.nan,
+    ).reshape(log_f_reverse_scaled.shape)
+    vr_resampled = vr_reverse_scaled / vs_hs[:, None]
 
     valid_mask = ~np.isnan(vr_resampled)
-    valid_counts_per_row = valid_mask.sum(axis=1)
-    f_all_tiled = np.tile(f_all, (vr_resampled.shape[0], 1))
-    flat_f_values = f_all_tiled[valid_mask]
-    flat_vr_values = vr_resampled[valid_mask]
-    stacked_data = np.column_stack([flat_f_values, flat_vr_values])
-    split_indices = valid_counts_per_row.cumsum()[:-1]
+    _, cols = np.where(valid_mask)
+    stacked_data = np.column_stack([f_all[cols], vr_resampled[valid_mask]])
+    split_indices = valid_mask.sum(axis=1).cumsum()[:-1]
     f_vr_resampled = np.split(stacked_data, split_indices, axis=0)
     
-    return depth_scalers, vs_scalers, f_vr_resampled
+    return depth, vs_hs, f_vr_resampled
 
-def denormalize_dc(vs_predict, depth_scalers, vs_scalers):
+def denormalize_dc(vs_predict, depth, vs_hs):
     """
-    Denormalizes predicted Vs values and computes inverted thickness using provided scalers.
-    This function takes the predicted Vs values and rescales them using the provided
-    depth and velocity scalers to obtain the inverted thickness and Vs profiles.
+    Denormalizes predicted Vs values and computes inverted thickness.
+    The model predicts normalized values: vs_norm = vs / vs_hs and
+    thickness_norm = thickness / depth. This function recovers the
+    physical values by multiplying back the normalization factors.
     Parameters
     ----------
     vs_predict : np.ndarray
-        Predicted Vs values, expected as a NumPy array.
-    depth_scalers : np.ndarray
-        Array of depth scaling factors used for normalization, shape (n,).
-    vs_scalers : np.ndarray
-        Array of velocity scaling factors used for normalization, shape (n,).
+        Predicted normalized Vs values (vs / vs_hs), shape (n, 101).
+    depth : np.ndarray
+        Depth values used for normalization, shape (n,).
+    vs_hs : np.ndarray
+        Half-space Vs values used for normalization, shape (n,).
     Returns
     -------
     thickness_inverted : np.ndarray
-        Inverted thickness values, shape (n, 101).
+        Inverted thickness values in physical units, shape (n, 101).
     vs_inverted : np.ndarray
-        Inverted Vs values, shape (n, 101).
+        Inverted Vs values in physical units, shape (n, 101).
     """
     
-    thickness_inverted = np.ones(101)
-    thickness_inverted = thickness_inverted / depth_scalers.reshape(-1, 1)
-    vs_inverted = vs_predict / vs_scalers.reshape(-1, 1)
+    n_layers = vs_predict.shape[1]
+    normalized_thickness = np.concatenate([np.full(n_layers - 1, 0.01), [0.0]])
+    thickness_inverted = normalized_thickness * depth.reshape(-1, 1)
+    vs_inverted = vs_predict * vs_hs.reshape(-1, 1)
 
     return thickness_inverted, vs_inverted
 
-def run_prediction(model_path, scaler_path, input_data):
+def run_prediction(model_path, input_data):
     """
-    Runs prediction on input data using a pre-trained model and scalers.
-    This function loads a trained model and associated scalers, preprocesses and standardizes
-    the input data, groups samples by sequence length, and performs batch prediction.
+    Runs prediction on input data using a pre-trained model.
+    This function loads a trained model, preprocesses the input data, groups samples
+    by sequence length, and performs batch prediction.
     Device selection (CPU/GPU) is handled automatically, and progress is displayed with a progress bar.
 
     Parameters
     ----------
     model_path : str
         Path to the saved model checkpoint file.
-    scaler_path : str
-        Path to the saved scalers.
     input_data : list of np.ndarray
         List of input samples, each as a 2D numpy array of shape (sequence_length, 2),
         where columns represent frequency and velocity.
@@ -136,12 +149,12 @@ def run_prediction(model_path, scaler_path, input_data):
 
     Notes
     -----
-    - Loads the model and scalers, preprocesses and standardizes the input data,
-      groups samples by sequence length, and performs batch prediction.
+    - Preprocesses input data with the same normalization used during training:
+      frequency = (log10(f) - FREQ_LOG_MIN) / (FREQ_LOG_MAX - FREQ_LOG_MIN),
+      velocity is used as-is because it is already vr / vs_hs.
     - Handles device selection (CPU/GPU) automatically.
     - Displays progress using a progress bar.
     """
-
     # --- Device Setup ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -149,17 +162,14 @@ def run_prediction(model_path, scaler_path, input_data):
     # --- Load Model ---
     print(f"Input data: {len(input_data)} samples")
 
-    print("Loading scalers...")
-    with open(scaler_path, 'rb') as f:
-        scalers = joblib.load(f)
-    freq_scaler = scalers['freq_scaler']
-    vel_scaler = scalers['vel_scaler']
-
     print("Loading model...")
     cfg = Config()
     model = LayerNormSumAggregationModel(cfg, use_transformer=True).to(device)
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    state_dict = checkpoint.get('model_state_dict', checkpoint)
+    if any(key.startswith('module.') for key in state_dict):
+        state_dict = {key.replace('module.', '', 1): value for key, value in state_dict.items()}
+    model.load_state_dict(state_dict)
     model.eval()
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 
@@ -168,9 +178,8 @@ def run_prediction(model_path, scaler_path, input_data):
     length_groups = defaultdict(list)
     for i, sample in enumerate(input_data):
         length = len(sample)
-        # Standardize
-        frequencies = freq_scaler.transform(sample[:, 0].reshape(-1, 1)).flatten()
-        velocities = vel_scaler.transform(sample[:, 1].reshape(-1, 1)).flatten()
+        frequencies = (np.log10(sample[:, 0]) - FREQ_LOG_MIN) / (FREQ_LOG_MAX - FREQ_LOG_MIN)
+        velocities = sample[:, 1]
         points = np.column_stack([frequencies, velocities])
         length_groups[length].append((i, points))
 
@@ -211,6 +220,8 @@ def compute_0mode_R_dispersion(thickness, vs, f):
     This function attempts to compute the Rayleigh wave phase velocity dispersion curve for the 
     fundamental mode (mode 0) using a range of resolution parameters. If all attempts fail, 
     it returns an array of zeros and prints a warning.
+    Note: thickness and velocities are scaled by the same factor before calling
+    disba for numerical stability; the output phase velocities are scaled back.
     Parameters
     ----------
     thickness : array_like
@@ -231,7 +242,7 @@ def compute_0mode_R_dispersion(thickness, vs, f):
     velocity_model = np.vstack((thickness, 2*vs, vs, density))
 
     # Define the list of resolutions to try
-    resolutions = [0.5, 0.05, 0.005, 0.0005]
+    resolutions = [0.05, 0.005, 0.0005]
     for res in resolutions:
         try:
             pd = PhaseDispersion(*velocity_model, dc=res)
@@ -263,32 +274,30 @@ def forward_parallel(vs_profiles, f_scaled, n_jobs=-1):
     
     periods = 1.0 / f_scaled[:,::-1]
     n_models = vs_profiles.shape[0]
-    density = np.ones(vs_profiles.shape[1])*2
-    thickness = np.ones(vs_profiles.shape[1])
+    scale = 100
+    vs_profiles_scaled = vs_profiles * scale
+    density = np.ones(vs_profiles.shape[1])
+    thickness = np.concatenate([np.full(vs_profiles.shape[1] - 1, 0.01), [0.0]]) * scale
+    resolutions = [0.05, 0.005, 0.0005, 0.00005, 0.00001]
+    vp_profiles_scaled = 2 * vs_profiles_scaled
 
     def _forward(i):
-        vs = vs_profiles[i]
-        period = periods[i]
-        velocity_model = np.vstack((thickness, 2*vs, vs, density))
-
-        resolutions = [5, 0.5, 0.05, 0.005, 0.0005]
         for res in resolutions:
             try:
-                pd = PhaseDispersion(*velocity_model, dc=res)
-                dc = pd(period, mode=0, wave="rayleigh")
-                velocities = dc.velocity[::-1]
-                return velocities
+                pd = PhaseDispersion(thickness, vp_profiles_scaled[i], vs_profiles_scaled[i], density, dc=res)
+                dc = pd(periods[i], mode=0, wave="rayleigh")
+                return dc.velocity[::-1]
             except Exception as e:
                 continue
     
-        print(f"Warning: All resolutions failed for the model. Returning zeros.")
+        print("Warning: All resolutions failed for the model. Returning zeros.")
         return np.zeros(f_scaled.shape[1])
 
-    vrs = Parallel(n_jobs=n_jobs, verbose=1)(
+    vrs = Parallel(n_jobs=n_jobs, verbose=1, prefer="threads")(
         delayed(_forward)(i) for i in range(n_models)
     )
 
-    return np.array(vrs)
+    return np.array(vrs) / scale
 
 def find_qualified_indices_and_rank(vr, vr_err, vr_models, limit=1):
     """
@@ -351,7 +360,7 @@ def get_depth_for_plot(thickness_inverted):
     depth_plot = np.cumsum(thickness_inverted, axis=1)
     depth_plot = np.repeat(depth_plot, 2, axis=1)
     depth_plot = depth_plot[:, :-1]
-    depth_plot[:,-1] = np.max(depth_plot[:,-1])
+    depth_plot[:,-1] = 1.05 * np.max(depth_plot[:,-1])
     depth_plot = np.hstack((np.zeros((depth_plot.shape[0], 1)), depth_plot))
     if original_ndim == 1:
         return depth_plot.squeeze()
