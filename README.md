@@ -1,10 +1,12 @@
 # SiDLIF: A Scale-Invariant Deep Learning-Based Inversion Framework for Surface-Wave Dispersion Curves via Physics-Guided Normalization
 
-SiDLIF is a physics-guided deep learning framework for inverting **fundamental-mode Rayleigh-wave dispersion curves** into shear-wave velocity ($V_S$) profiles.
+**SiDLIF** is a physics-guided deep learning framework for inverting **fundamental-mode Rayleigh-wave dispersion curves** into shear-wave velocity ($V_S$) profiles.
 
-By exploiting the scaling properties of surface-wave dispersion, SiDLIF transforms dispersion curves and their corresponding $V_S$ profiles into **dimensionless representations**. This decouples the learned inverse mapping from absolute depth and velocity scales, allowing the same pretrained model to be applied to problems ranging from shallow near-surface investigations to crustal-scale imaging without site-specific retraining.
+By exploiting the scaling properties of surface-wave dispersion, SiDLIF transforms dispersion curves and their corresponding $V_S$ profiles into **dimensionless representations**. This decouples the learned inverse mapping from absolute depth and velocity scales, allowing the same pretrained model to be applied across substantially different physical scales without site-specific retraining.
 
-This repository provides the implementation of the manuscript:
+The framework also incorporates the **Point-wise Additive Dispersion Inversion Transformer (PADIT)** to accommodate dispersion curves with variable frequency coverage, together with a misfit-constrained grid-search workflow that identifies ensembles of physically admissible solutions through forward-model validation.
+
+This repository provides the implementation associated with the manuscript:
 
 **“SiDLIF: A Scale-Invariant Deep Learning-Based Inversion Framework for Surface-Wave Dispersion Curves via Physics-Guided Normalization”**
 
@@ -15,22 +17,22 @@ This repository provides the implementation of the manuscript:
 ## Key Features
 
 * **Scale-invariant inversion**
-  Physics-guided dimensionless normalization removes the dependence of the neural network on absolute depth and velocity scales.
+  Physics-guided dimensionless normalization removes the dependence of the learned inverse mapping on absolute depth and velocity scales.
 
 * **Variable-length dispersion curves**
-  The Point-wise Additive Dispersion Inversion Transformer (**PADIT**) accommodates dispersion curves with different frequency coverages and numbers of sampled points.
+  PADIT accommodates dispersion curves with different frequency coverages and different numbers of sampled points.
 
 * **Two structural priors**
   Two pretrained PADIT models are provided:
 
-  * a **monotonic model**, trained using monotonically increasing $V_S$ profiles;
-  * an **LVZ-inclusive model**, trained using both monotonic profiles and profiles containing low-velocity zones (LVZs).
+  * **Monotonic PADIT**, trained using monotonically increasing $V_S$ profiles.
+  * **LVZ-inclusive PADIT**, trained using both monotonic profiles and profiles containing low-velocity zones (LVZs).
 
-* **Forward-model-constrained inversion**
-  Candidate $V_S$ profiles predicted by PADIT are evaluated by forward modeling their theoretical dispersion curves.
+* **Forward-model-constrained solutions**
+  Every candidate $V_S$ profile is evaluated by forward modeling its theoretical dispersion curve.
 
 * **Accepted-model ensembles**
-  Candidate models satisfying a prescribed dispersion-curve misfit threshold are retained as an ensemble of physically admissible solutions.
+  Candidate profiles satisfying a prescribed dispersion-curve misfit threshold are retained as an ensemble of physically admissible solutions.
 
 * **Minimal manual parameterization**
   Users do not need to prescribe a site-specific number of layers. The main search parameters are the half-space depth $z_{hs}$ and half-space shear-wave velocity $V_{S,hs}$.
@@ -41,33 +43,35 @@ This repository provides the implementation of the manuscript:
 
 ### 1. Dimensionless Normalization
 
-For a subsurface model with half-space depth $z_{hs}$ and half-space shear-wave velocity $V_{S,hs}$, the velocity profile is normalized as
+For a subsurface model with half-space depth $z_{hs}$ and half-space shear-wave velocity $V_{S,hs}$, depth and shear-wave velocity are normalized as
 
-$$
+```math
 z^* = \frac{z}{z_{hs}},
-$$
+```
 
-$$
+```math
 V_S^* = \frac{V_S}{V_{S,hs}}.
-$$
+```
 
-The corresponding dispersion curve is normalized as
+The corresponding dispersion curve is normalized according to
 
-$$
+```math
 c^* = \frac{c}{V_{S,hs}},
-$$
+```
 
-$$
+```math
 f^* = \frac{f z_{hs}}{V_{S,hs}},
-$$
+```
 
 where $f$ is frequency and $c$ is Rayleigh-wave phase velocity.
 
 The resulting normalized profile has
 
-$$
-z_{hs}^* = 1, \qquad V_{S,hs}^* = 1.
-$$
+```math
+z_{hs}^* = 1,
+\qquad
+V_{S,hs}^* = 1.
+```
 
 This dimensionless representation allows PADIT to learn the nonlinear relationship between dispersion curves and velocity structures independently of their absolute physical scales.
 
@@ -75,31 +79,37 @@ This dimensionless representation allows PADIT to learn the nonlinear relationsh
 
 ### 2. Grid Search Over Half-Space Parameters
 
-Because $z_{hs}$ and $V_{S,hs}$ are generally unknown a priori, SiDLIF evaluates multiple candidate pairs over user-defined search ranges.
+In field applications, $z_{hs}$ and $V_{S,hs}$ are generally unknown a priori. SiDLIF therefore evaluates multiple candidate pairs over prescribed search ranges.
 
-In the absence of additional prior information, the initial search ranges can be estimated from the maximum resolved wavelength
+The maximum resolved wavelength is defined as
 
-$$
-\lambda_{\max} = \max\left(\frac{c}{f}\right).
-$$
+```math
+\lambda_{\max}
+=
+\max\left(\frac{c}{f}\right).
+```
 
-The default ranges used in the example are
+In the absence of additional prior information, practical initial search intervals are
 
-$$
-z_{hs} \in [0.2\lambda_{\max},\ 0.7\lambda_{\max}],
-$$
+```math
+z_{hs}
+\in
+[0.2\lambda_{\max},\,0.7\lambda_{\max}],
+```
 
 and
 
-$$
-V_{S,hs} \in [1.05c_{\max},\ 3c_{\max}],
-$$
+```math
+V_{S,hs}
+\in
+[1.05c_{\max},\,3c_{\max}],
+```
 
-where $c_{\max}$ is the phase velocity corresponding to the maximum resolved wavelength.
+where $c_{\max}$ denotes the phase velocity associated with the longest resolved wavelength.
 
-These intervals are intended as practical initial ranges and can be modified when additional geological or geophysical information is available.
+These ranges are intended as initial bounds and can be modified when additional geological or geophysical information is available.
 
-The default example samples 200 values for $z_{hs}$ and 200 values for $V_{S,hs}$, producing 40,000 candidate parameter pairs.
+In the example workflow, $z_{hs}$ and $V_{S,hs}$ are each sampled at 200 points, yielding 40,000 candidate parameter pairs.
 
 ---
 
@@ -107,71 +117,74 @@ The default example samples 200 values for $z_{hs}$ and 200 values for $V_{S,hs}
 
 Each normalized dispersion curve is passed to the **Point-wise Additive Dispersion Inversion Transformer (PADIT)**.
 
-PADIT consists of:
+PADIT contains:
 
 * a point-wise feature extractor;
 * positional encoding;
 * six pre-LayerNorm Transformer encoder layers;
+* eight attention heads in each Transformer layer;
+* a feed-forward hidden dimension of 1024;
 * sum aggregation over the sequence dimension;
 * a regression head producing 100 normalized $V_S^*$ values;
-* a Sigmoid activation at the output layer.
+* a Sigmoid output activation.
 
-The output represents 100 equally spaced layers above the half-space, each with normalized thickness
+The regression head predicts the $V_S^*$ values of 100 equally spaced layers above the half-space. Each layer has normalized thickness
 
-$$
+```math
 t^* = 0.01.
-$$
+```
 
-The half-space velocity is fixed at
+The normalized half-space shear-wave velocity is fixed at
 
-$$
+```math
 V_{S,hs}^* = 1.
-$$
+```
+
+The Sigmoid output constrains the predicted normalized velocities to the interval between 0 and 1.
 
 ---
 
 ### 4. Denormalization
 
-The predicted dimensionless velocity profile is transformed back to the original physical scale according to
+For every candidate pair $(z_{hs},V_{S,hs})$, the predicted dimensionless profile is transformed back to physical units using
 
-$$
+```math
 z = z^* z_{hs},
-$$
+```
 
 and
 
-$$
+```math
 V_S = V_S^* V_{S,hs}.
-$$
+```
 
-Each candidate pair $(z_{hs}, V_{S,hs})$ therefore produces one candidate $V_S$ profile in physical units.
+Each candidate pair therefore produces one candidate $V_S$ profile at the physical depth and velocity scale of the target structure.
 
 ---
 
 ### 5. Forward-Model Validation
 
-For each candidate $V_S$ profile, the corresponding theoretical fundamental-mode Rayleigh-wave dispersion curve is calculated by forward modeling.
+For every candidate $V_S$ profile, a theoretical fundamental-mode Rayleigh-wave dispersion curve is calculated by forward modeling.
 
-The misfit is defined as
+The agreement between the theoretical and observed dispersion curves is quantified using
 
-$$
+```math
 \mathrm{misfit}
-===============
-
+=
 \sqrt{
 \frac{1}{m}
 \sum_{j=1}^{m}
 \left(
 \frac{
-c_j^{\mathrm{obs}} - c_j^{\mathrm{theo}}
+c_j^{\mathrm{obs}}-c_j^{\mathrm{theo}}
 }{
 \sigma_j
 }
 \right)^2
-},
-$$
+}.
+```
 
-where:
+Here:
 
 * $c_j^{\mathrm{obs}}$ is the observed phase velocity;
 * $c_j^{\mathrm{theo}}$ is the theoretical phase velocity;
@@ -180,34 +193,53 @@ where:
 
 Candidate profiles satisfying
 
-$$
+```math
 \mathrm{misfit} < 1
-$$
+```
 
 are retained as **accepted models**.
 
-The model with the lowest misfit is identified as the best-fit solution. The full accepted-model ensemble characterizes the range of velocity structures consistent with the observed dispersion curve under the adopted parameterization, search bounds, and structural prior.
+The candidate with the lowest misfit is identified as the **best-fit model**, while the full accepted-model ensemble represents the range of velocity structures consistent with the observed dispersion curve under the adopted search bounds, parameterization, and structural prior.
 
 ---
 
-## Pretrained Models
+## Pretrained PADIT Models
 
-Two pretrained PADIT models are provided.
+Two pretrained PADIT models are provided with SiDLIF.
 
-| Model               | File                      | Structural constraint                            |
+| Model               | Weight file               | Structural prior                                 |
 | ------------------- | ------------------------- | ------------------------------------------------ |
-| Monotonic PADIT     | `PADIT_monotonic.pth`     | Favors shear-wave velocity increasing with depth |
+| Monotonic PADIT     | `PADIT_monotonic.pth`     | Monotonically increasing $V_S$ profiles          |
 | LVZ-inclusive PADIT | `PADIT_LVZ_inclusive.pth` | Allows low-velocity zones and velocity reversals |
 
-The **monotonic model** is suitable when velocity reversals are not expected or when a stronger monotonic structural constraint is preferred.
+### Monotonic PADIT
 
-The **LVZ-inclusive model** should be considered when low-velocity zones or velocity reversals may be present.
+The monotonic model is appropriate when an overall increase in $V_S$ with depth is considered a reasonable structural constraint.
 
-The pretrained model files are distributed through the GitHub **Releases** page rather than stored directly in the source-code repository.
+Because it imposes a stronger structural prior, it generally produces a more restricted admissible solution space.
 
-[Download pretrained models from GitHub Releases](https://github.com/CTJ-UT/U-SWIFT-A-Unified-Surface-Wave-Inversion-Framework-with-Transformer/releases)
+### LVZ-Inclusive PADIT
 
-After downloading, place the model files in the `models/` directory:
+The LVZ-inclusive model should be considered when low-velocity zones or velocity reversals may occur.
+
+Because it represents a broader range of possible velocity structures, its accepted-model ensemble may also be broader.
+
+The two models therefore represent **different structural priors** rather than competing models for which one is universally preferable.
+
+---
+
+## Downloading the Pretrained Models
+
+The pretrained `.pth` files are distributed through the **GitHub Releases** page rather than stored directly in the source-code repository.
+
+Download:
+
+```text
+PADIT_monotonic.pth
+PADIT_LVZ_inclusive.pth
+```
+
+and place them in the `models/` directory:
 
 ```text
 models/
@@ -221,53 +253,40 @@ models/
 
 ### 1. Download the Repository
 
-Download the repository using **Code → Download ZIP**, or clone it with Git:
+Download the repository using **Code → Download ZIP**, or clone it using Git:
 
 ```bash
 git clone https://github.com/CTJ-UT/U-SWIFT-A-Unified-Surface-Wave-Inversion-Framework-with-Transformer.git
 cd U-SWIFT-A-Unified-Surface-Wave-Inversion-Framework-with-Transformer
 ```
 
----
-
 ### 2. Download the Pretrained Models
 
-Download
-
-```text
-PADIT_monotonic.pth
-PADIT_LVZ_inclusive.pth
-```
-
-from the latest GitHub Release and place them inside
+Download the two PADIT weight files from the latest GitHub Release and place them inside
 
 ```text
 models/
 ```
 
----
-
 ### 3. Install Dependencies
 
-Install the required Python packages using
+Install the required Python packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
 ### 4. Prepare the Dispersion Curve
 
-An example input dispersion curve is provided in the `examples/` directory.
+An example dispersion curve is provided in the `examples/` directory.
 
-The input file contains three columns:
+The input data contain three columns:
 
 ```text
 frequency (Hz)    phase velocity (m/s)    standard deviation (m/s)
 ```
 
-The data can be loaded using
+The data are loaded in `main.ipynb` using
 
 ```python
 data = np.loadtxt("examples/example_01.txt")
@@ -283,13 +302,13 @@ where:
 * `vr` is Rayleigh-wave phase velocity;
 * `vr_std` is the corresponding standard deviation.
 
-If measurement uncertainties are not directly available, users should define `vr_std` according to the uncertainty adopted for their dispersion measurements.
+If measurement standard deviations are not directly available, users should define `vr_std` according to an appropriate uncertainty estimate for their dispersion measurements.
 
 ---
 
 ### 5. Select the PADIT Model
 
-The example notebook uses the monotonic model by default:
+The example notebook uses the monotonic PADIT model by default:
 
 ```python
 model_path = "models/PADIT_monotonic.pth"  # Replace with "models/PADIT_LVZ_inclusive.pth" to use the LVZ-inclusive model.
@@ -307,17 +326,18 @@ main.ipynb
 
 and execute the cells sequentially.
 
-The notebook performs:
+The notebook performs the complete SiDLIF workflow:
 
-1. loading and sorting of the observed dispersion curve;
-2. definition of the $z_{hs}$ and $V_{S,hs}$ search ranges;
-3. dimensionless normalization;
-4. PADIT inference;
-5. denormalization;
-6. forward modeling;
-7. misfit evaluation;
-8. identification of the best-fit model and accepted-model ensemble;
-9. visualization of the inversion results.
+1. load and sort the observed dispersion curve;
+2. define the search ranges for $z_{hs}$ and $V_{S,hs}$;
+3. construct candidate half-space parameter pairs;
+4. normalize the dispersion curves;
+5. perform PADIT inference;
+6. denormalize the predicted $V_S$ profiles;
+7. calculate theoretical dispersion curves by forward modeling;
+8. evaluate dispersion-curve misfits;
+9. identify the best-fit model and accepted-model ensemble;
+10. visualize the inversion results.
 
 ---
 
@@ -341,7 +361,7 @@ depth_bounds_halfspace = np.array([
 ]) * np.max(vr / f)
 ```
 
-The number of sampled $z_{hs}$ and $V_{S,hs}$ values can also be modified:
+The numbers of sampled half-space depths and velocities can also be modified:
 
 ```python
 depth, vs_hs, f_vr_resampled = scale_and_resample_dc(
@@ -358,12 +378,14 @@ depth, vs_hs, f_vr_resampled = scale_and_resample_dc(
 
 Here:
 
-* `nd` controls the number of sampled half-space depths;
-* `nv` controls the number of sampled half-space velocities.
+* `nd` is the number of sampled half-space depths;
+* `nv` is the number of sampled half-space shear-wave velocities.
 
 Increasing `nd` and `nv` provides denser coverage of the search space but also increases computational cost.
 
-If no accepted models are obtained, the prescribed search ranges should be reconsidered or broadened.
+If no accepted models are obtained, the search ranges should be reconsidered or broadened.
+
+If independent geological or geophysical constraints are available, they can be used to define narrower and more appropriate search ranges.
 
 ---
 
@@ -371,46 +393,14 @@ If no accepted models are obtained, the prescribed search ranges should be recon
 
 The inversion workflow produces:
 
-* candidate $V_S$ profiles for the sampled $(z_{hs}, V_{S,hs})$ pairs;
+* candidate $V_S$ profiles for the sampled $(z_{hs},V_{S,hs})$ pairs;
 * corresponding forward-modeled dispersion curves;
-* misfit values for all candidate models;
+* dispersion-curve misfit values;
 * the best-fit $V_S$ profile;
 * the accepted-model ensemble satisfying the prescribed misfit threshold;
 * the corresponding accepted theoretical dispersion curves.
 
-The accepted-model ensemble can be used to examine inversion nonuniqueness and the effect of the structural prior represented by the selected PADIT model.
-
----
-
-## Choosing Between the Two PADIT Models
-
-The two pretrained models encode different structural assumptions.
-
-### Monotonic PADIT
-
-Use
-
-```text
-PADIT_monotonic.pth
-```
-
-when an overall increase in $V_S$ with depth is considered a reasonable structural constraint.
-
-This model generally provides a more restricted admissible solution space.
-
-### LVZ-Inclusive PADIT
-
-Use
-
-```text
-PADIT_LVZ_inclusive.pth
-```
-
-when low-velocity zones or velocity reversals should be considered.
-
-Because this model represents a broader range of velocity structures, it may also produce a broader accepted-model ensemble.
-
-The two models should therefore be viewed as representing different structural priors rather than as competing models with one being universally preferable.
+The accepted-model ensemble provides a practical way to examine inversion nonuniqueness and the influence of the structural prior represented by the selected PADIT model.
 
 ---
 
@@ -433,22 +423,35 @@ The two models should therefore be viewed as representing different structural p
 └── requirements.txt
 ```
 
-### Main Files
+### `main.ipynb`
 
-**`main.ipynb`**
 Example notebook implementing the complete SiDLIF inversion workflow.
 
-**`src/aggregation_model.py`**
+### `src/aggregation_model.py`
+
 Implementation of the PADIT neural-network architecture.
 
-**`src/utils.py`**
-Utility functions for dispersion-curve normalization, resampling, neural-network prediction, denormalization, forward modeling, misfit calculation, and result processing.
+### `src/utils.py`
 
-**`examples/example_01.txt`**
+Utility functions used for:
+
+* dimensionless normalization;
+* dispersion-curve resampling;
+* PADIT inference;
+* profile denormalization;
+* Rayleigh-wave forward modeling;
+* misfit calculation;
+* accepted-model identification and result processing.
+
+### `examples/example_01.txt`
+
 Example fundamental-mode Rayleigh-wave dispersion curve.
 
-**`models/`**
-Local directory for pretrained PADIT weights downloaded from the GitHub Releases page.
+### `models/`
+
+Local directory for pretrained PADIT weights downloaded from GitHub Releases.
+
+The large `.pth` files are intentionally not stored directly in the source-code repository.
 
 ---
 
@@ -459,35 +462,43 @@ The current pretrained PADIT models were developed and validated for:
 * fundamental-mode Rayleigh-wave dispersion curves;
 * one-dimensional horizontally layered subsurface structures;
 * 100 normalized layers above the half-space;
+* normalized layer thickness $t^*=0.01$;
 * a fixed Poisson's ratio of $1/3$ in the synthetic training models;
 * constant density in the synthetic training models.
 
 The present implementation focuses on inversion for $V_S$.
 
-The 100-layer numerical discretization should not be interpreted as the intrinsic geophysical resolution of the inversion. Actual resolution is controlled primarily by the information content and frequency coverage of the observed dispersion curve.
+The 100-layer numerical discretization should **not** be interpreted as the intrinsic geophysical spatial resolution of the inversion. Actual resolution is primarily controlled by the information content and frequency coverage of the observed dispersion curve.
 
-Future extensions may incorporate additional elastic parameters, higher-mode dispersion information, or other geophysical observations.
+The current pretrained PADIT models were trained and validated using fundamental-mode Rayleigh-wave dispersion curves alone. Future extensions may incorporate additional elastic parameters, higher-mode dispersion information, or other geophysical observations.
+
+---
+
+## Reproducibility
+
+The source code, example data, and pretrained model weights are provided to facilitate reproduction and application of the SiDLIF workflow.
+
+For reproducible use:
+
+1. use the source code associated with the corresponding GitHub Release;
+2. use the pretrained PADIT weights distributed with that release;
+3. keep the model file names unchanged;
+4. record the $z_{hs}$ and $V_{S,hs}$ search ranges used for each inversion;
+5. record the selected PADIT structural prior and misfit threshold.
+
+A versioned research archive is also maintained through Zenodo.
 
 ---
 
 ## Citation
 
-If you use SiDLIF in your research, please cite:
+If you use SiDLIF in your research, please cite the associated manuscript:
 
-**Tianjian Cheng, Hongrui Xu, Jiayu Feng, Qiaomu Qi, Xiongyu Hu, and Chaofan Yao.
-“SiDLIF: A Scale-Invariant Deep Learning-Based Inversion Framework for Surface-Wave Dispersion Curves via Physics-Guided Normalization.”**
+**Tianjian Cheng, Hongrui Xu, Jiayu Feng, Qiaomu Qi, Xiongyu Hu, and Chaofan Yao.**
 
-Complete bibliographic information and the publication DOI will be added after publication.
+**“SiDLIF: A Scale-Invariant Deep Learning-Based Inversion Framework for Surface-Wave Dispersion Curves via Physics-Guided Normalization.”**
 
----
-
-## Open Research
-
-The source code is maintained in this repository.
-
-Pretrained PADIT model weights are distributed through GitHub Releases.
-
-A versioned research archive will also be maintained on Zenodo.
+Complete journal, volume, page, and DOI information will be added after publication.
 
 ---
 
@@ -506,9 +517,9 @@ For questions regarding SiDLIF or its implementation, please contact:
 **Tianjian Cheng**
 Faculty of Geosciences and Engineering
 Southwest Jiaotong University
-
-or
+Email: `tjcheng.ok@163.com`
 
 **Hongrui Xu**
 Faculty of Geosciences and Engineering
 Southwest Jiaotong University
+Email: `hongrui_xu@swjtu.edu.cn`
